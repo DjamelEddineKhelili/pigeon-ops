@@ -1,0 +1,42 @@
+# The whole department on one machine. Start:  docker compose up -d --build
+#
+#   ┌────────────── docker network "default" ───────────────┐
+#   │  n8n  ──── HTTP: http://pipeline:8000 ────►  pipeline │
+#   └──┬───────────────────────────────────────────────┬────┘
+#      │ localhost:5678 (you, in a browser)             │ localhost:8000/docs (you, in a browser)
+#
+# Inside the network, containers find each other BY SERVICE NAME ("pipeline"), not "localhost".
+
+services:
+  pipeline:
+    build: .
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      - LAKE_DIR=/data/lake
+      - WAREHOUSE_PATH=/data/warehouse/warehouse.duckdb
+      - TZ=UTC
+      - WATCHFILES_FORCE_POLLING=true      # lets --reload notice edits made on Windows
+    volumes:
+      - ./lake:/data/lake                   # the lake lives in YOUR project folder: you can open it
+      - ./warehouse:/data/warehouse
+      - ./pipeline:/app/pipeline            # live code: edit on Windows, the server reloads
+    command: uvicorn pipeline.app:app --host 0.0.0.0 --port 8000 --reload
+
+  n8n:
+    image: n8nio/n8n:latest
+    restart: unless-stopped
+    ports:
+      - "5678:5678"
+    environment:
+      - GENERIC_TIMEZONE=Europe/Paris       # schedules are in Paris time (humans)
+      - TZ=Europe/Paris
+      - N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS=true
+    volumes:
+      - n8n_data:/home/node/.n8n            # your workflows + account survive restarts
+    depends_on:
+      - pipeline
+
+volumes:
+  n8n_data:

@@ -1,0 +1,9 @@
+# data never goes to git: it's big, it's regenerated, and the lake is the source of truth
+lake/
+warehouse/
+# python
+.venv/
+__pycache__/
+*.pyc
+# secrets (later levels: Groq key, Telegram token)
+.env
